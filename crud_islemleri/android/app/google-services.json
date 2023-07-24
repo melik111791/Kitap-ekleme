@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "411721181032",
+    "project_id": "crudogreniyorum",
+    "storage_bucket": "crudogreniyorum.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:411721181032:android:87a30e7c743a3c6693d8dd",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "411721181032-k93al0lj6p1c8g223vu6rfje0rffrbg1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBon0nI2SamL_hZd-pbelip9xANX379bQ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "411721181032-k93al0lj6p1c8g223vu6rfje0rffrbg1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
