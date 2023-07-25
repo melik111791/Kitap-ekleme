@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+
 class PostScreen extends StatefulWidget {
   const PostScreen({super.key});
 
@@ -20,6 +21,38 @@ class _PostScreenState extends State<PostScreen> {
   List<QueryDocumentSnapshot<Object?>> kitaplar = [];
 
   bool isSearching = false; // Flag to track if user is searching
+
+  void _showsnackbarkullaniciyok() {
+    setState(() {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Böyle bir kullanıcı yok',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          dismissDirection: DismissDirection.up,
+          backgroundColor: Colors.red,
+        ),
+      );
+    });
+  }
+
+  /* void _showsnackbarkullanicibos() {
+    setState(() {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Lütfen bir kullanıcı adı giriniz',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          dismissDirection: DismissDirection.up,
+          backgroundColor: Colors.red,
+        ),
+      );
+    });
+  } */
 
   @override
   void initState() {
@@ -150,8 +183,13 @@ class _PostScreenState extends State<PostScreen> {
                       ),
                       onPressed: () {
                         if (kitaplar.isEmpty) {
-                          print('Böyle bir kullanıcı yok');
+                          print('Kullanıcı bulunamadı!!!');
+                          _showsnackbarkullaniciyok();
                         }
+                        /* else if (searchController.text.isEmpty) {
+                          _showsnackbarkullanicibos();
+                          print('kullanıcı kısmı boş'); 
+                        } */
                       },
                     ),
                   ),
@@ -233,7 +271,8 @@ class _PostScreenState extends State<PostScreen> {
                     ),
                   );
                 },
-              )
+              ),
+            
             ],
           ),
         ),
