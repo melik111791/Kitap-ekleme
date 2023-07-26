@@ -17,6 +17,12 @@ dependencies:
   google_fonts: ^5.1.0
   firebase_core: ^2.15.0
   cloud_firestore: ^4.8.3
+  firebase_storage: ^11.2.5
+  image_picker: ^1.0.1
+  get: ^4.6.5
+  image_cropper: ^5.0.0
+  flutter_image_compress: ^2.0.4
+  cross_file: ^0.3.3+4
   
 dev_dependencies:
   flutter_test:
