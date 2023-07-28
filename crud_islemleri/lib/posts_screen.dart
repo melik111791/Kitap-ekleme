@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
-
 class PostScreen extends StatefulWidget {
   const PostScreen({Key? key}) : super(key: key);
 
@@ -19,10 +18,12 @@ class _PostScreenState extends State<PostScreen> {
   final TextEditingController userNameController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
   final TextEditingController updateController = TextEditingController();
+  final TextEditingController updatedImageUrlController =
+      TextEditingController();
 
   //Resmin koyulacağı container'ın büyümesi küçülmesi için gerekli değişkenler
-  double containerheight = 100;
-  double containerwidth = 100;
+  double containerheight = 60;
+  double containerwidth = 60;
   double timerSeconds = 2;
   //--------------------------------------
 
@@ -69,9 +70,8 @@ class _PostScreenState extends State<PostScreen> {
 
   List<QueryDocumentSnapshot<Object?>> kitaplar = [];
 
-  bool isSearching = false; // Flag to track if the user is searching
-
-  
+  bool isSearching = false;
+  // Flag to track if the user is searching
 
   @override
   void initState() {
@@ -135,17 +135,26 @@ class _PostScreenState extends State<PostScreen> {
     Reference referenceDirectoryImage = referenceRoot.child('images');
     Reference referenceImageToUpload =
         referenceDirectoryImage.child(uniqueFileName);
-    
-       
-        
 
     try {
       // Upload the selected image to Firebase Storage
-      await referenceImageToUpload.putFile(File(image!.path));
+      TaskSnapshot uploadTask =
+          await referenceImageToUpload.putFile(File(image!.path));
+      String downloadUrl = await uploadTask.ref.getDownloadURL();
 
-      
+      // Save the download URL along with other data to Firestore
+      await userBooks.add({
+        'bookname': bookNameController.text.trim(),
+        'username': userNameController.text.trim(),
+        'imgUrl': downloadUrl,
+      }).then((value) => print('Kitap eklendi'));
 
-     
+      // Clear the controllers and reset the image variable after successful upload
+      bookNameController.clear();
+      userNameController.clear();
+      setState(() {
+        image = null;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -160,16 +169,16 @@ class _PostScreenState extends State<PostScreen> {
           backgroundColor: Colors.green,
         ),
       );
-    } catch (error) {}
+    } catch (error) {
+      print('Error uploading image: $error');
+    }
   }
 
   //Sil tuşuna bastıktan sonra veya kaydettikten sonra resmin container içinden silinmesini sağlayan fonkisyon
   void deleteImage() {
-   
-      setState(() {
-        image = null;
-      });
-     
+    setState(() {
+      image = null;
+    });
   }
 
   @override
@@ -187,6 +196,13 @@ class _PostScreenState extends State<PostScreen> {
                   child: Text(
                     'Kitapları girmeye başlayın...',
                     style: TextStyle(
+                      shadows: [
+                        Shadow(
+                          blurRadius: 15.0,
+                          color: Colors.purple,
+                          offset: Offset(2.0, 2.0),
+                        ),
+                      ],
                       color: Colors.black,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -221,7 +237,33 @@ class _PostScreenState extends State<PostScreen> {
                 ),
               ),
 
-              // Kitap Resmi
+              // Kitap adı girme kısmı
+              Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: TextFormField(
+                  controller: bookNameController,
+                  decoration: InputDecoration(
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.menu_book_sharp,
+                      color: Colors.purple,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    labelText: "Kitap adı",
+                    labelStyle: TextStyle(color: Colors.purple),
+                  ),
+                ),
+              ),
+
+              // Kitap Resmi Kısmı
               Padding(
                 padding: EdgeInsets.only(top: 48),
                 child: TextFormField(
@@ -266,57 +308,70 @@ class _PostScreenState extends State<PostScreen> {
                         color: Colors.purple,
                       ),
                       onPressed: () async {
-                        //Resim seçme bölümünün açıldığı alertdialogu oluşturduk ve iconlara gereken özellikleir verdik
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              backgroundColor:
-                                  Color.fromARGB(255, 222, 172, 229),
-                              title: Text(
-                                  "Resmi seçeceğiniz uygualamayı seçin..."),
-                              content: Row(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 65.0),
-                                    child: IconButton(
+                        if (userNameController.text.isNotEmpty) {
+                          //Resim seçme bölümünün açıldığı alertdialogu oluşturduk ve iconlara gereken özellikleir verdik
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                backgroundColor: Colors.white,
+                                title: Text(
+                                    "Resmi seçeceğiniz uygualamayı seçin..."),
+                                content: Row(
+                                  children: [
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(left: 65.0),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          GetImageGallery();
+                                          Navigator.pop(context);
+                                        },
+                                        icon: Icon(
+                                          Icons.image_outlined,
+                                          size: 40,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 20,
+                                    ),
+                                    IconButton(
                                       onPressed: () {
-                                        GetImageGallery();
+                                        GetImageCamera();
                                         Navigator.pop(context);
                                       },
                                       icon: Icon(
-                                        Icons.image_outlined,
+                                        Icons.camera_alt_sharp,
                                         size: 40,
                                       ),
                                     ),
-                                  ),
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  IconButton(
-                                    onPressed: () {
-                                      GetImageCamera();
-                                      Navigator.pop(context);
-                                    },
-                                    icon: Icon(
-                                      Icons.camera_alt_sharp,
-                                      size: 40,
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                      },
+                                      icon: Icon(
+                                        Icons.arrow_back,
+                                      ),
+                                      padding:
+                                          EdgeInsets.fromLTRB(50, 90, 0, 2),
                                     ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                    },
-                                    icon: Icon(
-                                      Icons.arrow_back,
-                                    ),
-                                    padding: EdgeInsets.fromLTRB(50, 90, 0, 2),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.red,
+                              content: Text(
+                                'Lütfen önce bir kullanıcı adı giriniz...',
+                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
-                            );
-                          },
-                        );
+                            ),
+                          );
+                        }
                       },
 
                       //-------------------------------
@@ -343,6 +398,7 @@ class _PostScreenState extends State<PostScreen> {
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
+                              backgroundColor: Colors.red,
                               content: Text(
                                 'Herhangi Bir Resim Seçilmedi!!!',
                                 style: TextStyle(
@@ -353,7 +409,19 @@ class _PostScreenState extends State<PostScreen> {
                           );
                         }
                       },
-                      child: Text('Kaydet'),
+                      child: Text(
+                        'Kaydet',
+                        style: TextStyle(
+                          color: Colors.black,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 15.0,
+                              color: Colors.purple,
+                              offset: Offset(2.0, 2.0),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
 
                     SizedBox(
@@ -361,34 +429,18 @@ class _PostScreenState extends State<PostScreen> {
                     ),
 
                     //Fotoğrafın gözüktüğü container...
-                    Flexible(
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            containerheight = 300;
-                            containerwidth = 300;
-                          });
-                          Timer(timerSeconds.seconds, () {
-                            setState(() {
-                              containerheight = 100;
-                              containerwidth = 100;
-                            });
-                          });
-                        },
-                        child: Container(
-                          child: image != null
-                              ? Image.file(
-                                  image!.absolute,
-                                  fit: BoxFit.fill,
-                                )
-                              : Center(child: Icon(Icons.image)),
-                          height: containerheight,
-                          width: containerwidth,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Colors.black,
-                            ),
-                          ),
+                    Container(
+                      child: image != null
+                          ? Image.file(
+                              image!.absolute,
+                              fit: BoxFit.fill,
+                            )
+                          : Center(child: Icon(Icons.image)),
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.black,
                         ),
                       ),
                     ),
@@ -398,106 +450,82 @@ class _PostScreenState extends State<PostScreen> {
 
                     //Eklenen fotoğraftan emin diiliz ve silmek istiyoruz
                     TextButton(
-                      onPressed: () {
-                        showDialog(
+                      onPressed: () async {
+                        if (image != null) {
+                          showDialog(
                             context: context,
                             builder: (BuildContext context) {
                               return AlertDialog(
-                                backgroundColor:
-                                    Color.fromARGB(255, 222, 172, 229),
+                                backgroundColor: Colors.white,
                                 title: Text(
                                     "Resmi silmek istediğinize emin misiniz?"),
-                                content: Center(
+                                content: SingleChildScrollView(
+                                  child: Container(
+                                    height: 90,
+                                    width: 50,
                                     child: Row(
-                                  children: [
-                                    TextButton(
-                                      onPressed: () {
-                                        deleteImage();
-                                        Navigator.pop(context);
-                                      },
-                                      child: Text('Evet'),
+                                      children: [
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(left: 78.0),
+                                          child: IconButton(
+                                            onPressed: () {
+                                              deleteImage();
+                                              Navigator.pop(context);
+                                            },
+                                            icon: Icon(
+                                              Icons.thumb_up,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 5,
+                                        ),
+                                        IconButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          icon: Icon(
+                                            Icons.thumb_down,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    SizedBox(
-                                      width: 15,
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                      },
-                                      child: Text('Hayır'),
-                                    ),
-                                  ],
-                                )),
+                                  ),
+                                ),
                               );
-                            });
-                      },
-                      child: Text('Sil'),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Kitap adı girme kısmı
-              Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: TextFormField(
-                  controller: bookNameController,
-                  decoration: InputDecoration(
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.menu_book_sharp,
-                      color: Colors.purple,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    labelText: "Kitap adı",
-                    labelStyle: TextStyle(color: Colors.purple),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        Icons.add_circle,
-                        color: Colors.purple,
-                      ),
-                      onPressed: () async {
-                        if (bookNameController.text.isNotEmpty &&
-                            userNameController.text.isNotEmpty) {
-                          await userBooks.add({
-                            'bookname': bookNameController.text,
-                            'username': userNameController.text,
-                             
-                          }).then((value) => print('Kitap eklendi'));
-                          bookNameController.clear();
-                        } else if (userNameController.text.isEmpty) {
+                            },
+                          );
+                        } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
+                              backgroundColor: Colors.red,
                               content: Text(
-                                'Lütfen bir kullanıcı adı giriniz!!!',
+                                'Herhangi Bir Resim Seçilmedi!!!',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              backgroundColor: Colors.red,
                             ),
                           );
-                        } else if (bookNameController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Lütfen bir kitap adı giriniz!!!',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          print('Bir kitap yok');
+                          print('Resim yok');
                         }
                       },
+                      child: Text(
+                        'Sil',
+                        style: TextStyle(
+                          color: Colors.black,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 15.0,
+                              color: Colors.purple,
+                              offset: Offset(2.0, 2.0),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
 
@@ -558,81 +586,139 @@ class _PostScreenState extends State<PostScreen> {
                 physics: NeverScrollableScrollPhysics(),
                 itemCount: kitaplar.length,
                 itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(
-                      "Kitap adı: ${kitaplar[index]["bookname"] ?? ""} ",
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    leading: IconButton(
-                      icon: Icon(Icons.update),
-                      onPressed: () async {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: Text("GÜNCELLEME"),
-                              content: TextFormField(
-                                controller: updateController,
-                                decoration: InputDecoration(
-                                  label: Text('Yeni kitabın adını yazınız'),
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  child: Text("güncelle"),
-                                  onPressed: () async {
-                                    Navigator.of(context).pop();
-
-                                    userBooks.doc(kitaplar[index].id).update({
-                                      "bookname": updateController.text,
-                                    });
-
-                                    var data = await userBooks
-                                        .where(
-                                          "username",
-                                          isEqualTo:
-                                              searchController.text.trim(),
-                                        )
-                                        .get();
-                                    setState(() {
-                                      kitaplar = data.docs;
-                                    });
-                                    updateController.clear();
-                                  },
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                  child: Icon(
-                                    Icons.arrow_back,
+                  return Column(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            containerheight = 300;
+                            containerwidth = 300;
+                          });
+                        },
+                        onDoubleTap: () {
+                          setState(() {
+                            containerheight = 60;
+                            containerwidth = 60;
+                          });
+                        },
+                        child: Container(
+                          child: Image.network(
+                            '${kitaplar[index]["imgUrl"]}',
+                            height: containerheight,
+                            width: containerwidth,
+                          ),
+                        ),
+                      ),
+                      ListTile(
+                        title: Text(
+                          "Kitap adı: ${kitaplar[index]["bookname"] ?? ""} ",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        leading: IconButton(
+                          icon: Icon(Icons.update),
+                          onPressed: () async {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text("GÜNCELLEME"),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Image.network(
+                                        '${kitaplar[index]["imgUrl"]}',
+                                        height: 100,
+                                        width: 100,
+                                      ),
+                                      TextFormField(
+                                        controller: updateController,
+                                        decoration: InputDecoration(
+                                          label: Text(
+                                              'Yeni kitabın adını yazınız'),
+                                        ),
+                                      ),
+                                     
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  actions: [
+                                    TextButton(
+                                      child: Text("Güncelle"),
+                                      onPressed: () async {
+                                        Navigator.of(context).pop();
+
+                                        String updatedImageUrl =
+                                            updatedImageUrlController.text
+                                                .trim();
+                                        String updatedBookName =
+                                            updateController.text.trim();
+
+                                        // Only update the book name if it's not empty
+                                        if (updatedBookName.isNotEmpty) {
+                                          userBooks
+                                              .doc(kitaplar[index].id)
+                                              .update({
+                                            "bookname": updatedBookName,
+                                          });
+                                        }
+
+                                        // Only update the image URL if it's not empty
+                                        if (updatedImageUrl.isNotEmpty) {
+                                          userBooks
+                                              .doc(kitaplar[index].id)
+                                              .update({
+                                            "imgUrl": updatedImageUrl,
+                                          });
+                                        }
+
+                                        // Refresh the data to display the updated results
+                                        var data = await userBooks
+                                            .where(
+                                              "username",
+                                              isEqualTo:
+                                                  searchController.text.trim(),
+                                            )
+                                            .get();
+                                        setState(() {
+                                          kitaplar = data.docs;
+                                        });
+
+                                        updateController.clear();
+                                        updatedImageUrlController.clear();
+                                      },
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                      },
+                                      child: Icon(Icons.arrow_back),
+                                    ),
+                                  ],
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(
-                        Icons.remove,
-                        color: Colors.red,
-                      ),
-                      onPressed: () async {
-                        userBooks.doc(kitaplar[index].id).delete();
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(
+                            Icons.remove,
+                            color: Colors.red,
+                          ),
+                          onPressed: () async {
+                            userBooks.doc(kitaplar[index].id).delete();
 
-                        var data = await userBooks
-                            .where(
-                              "username",
-                              isEqualTo: searchController.text.trim(),
-                            )
-                            .get();
-                        setState(() {
-                          kitaplar = data.docs;
-                        });
-                      },
-                    ),
+                            var data = await userBooks
+                                .where(
+                                  "username",
+                                  isEqualTo: searchController.text.trim(),
+                                )
+                                .get();
+                            setState(() {
+                              kitaplar = data.docs;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
